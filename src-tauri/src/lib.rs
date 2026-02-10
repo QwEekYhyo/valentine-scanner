@@ -1,8 +1,10 @@
 use btleplug::api::{Central, Manager as _, Peripheral as _, ScanFilter};
-use btleplug::platform::Manager;
+use btleplug::platform::{Adapter, Manager, Peripheral};
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use tauri::Emitter;
+use tokio::sync::Mutex;
 use uuid::Uuid;
 
 const DEVICE_NAME: &str = "ValentineScanner";
@@ -14,13 +16,53 @@ struct BleNotification {
     data_string: String,
 }
 
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+struct BleState {
+    adapter: Option<Adapter>,
+    device: Option<Peripheral>,
+    char_uuid: Option<Uuid>,
+}
+
+impl BleState {
+    fn new() -> Self {
+        Self {
+            adapter: None,
+            device: None,
+            char_uuid: None,
+        }
+    }
+
+    async fn cleanup(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        println!("Starting BLE cleanup...");
+
+        // Unsubscribe and disconnect from device
+        if let (Some(device), Some(char_uuid)) = (&self.device, &self.char_uuid) {
+            let characteristics = device.characteristics();
+            if let Some(target_char) = characteristics.iter().find(|c| c.uuid == *char_uuid) {
+                device.unsubscribe(target_char).await.ok();
+            }
+
+            device.disconnect().await.ok();
+        }
+
+        // Stop scanning
+        if let Some(adapter) = &self.adapter {
+            adapter.stop_scan().await.ok();
+        }
+
+        println!("BLE cleanup complete!");
+        Ok(())
+    }
+}
+
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
-async fn ble_task(app: tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+async fn ble_task(
+    app: tauri::AppHandle,
+    ble_state: Arc<Mutex<BleState>>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let char_uuid = Uuid::parse_str(CHARACTERISTIC_UUID)?;
 
     // Get Bluetooth adapter
@@ -36,7 +78,14 @@ async fn ble_task(app: tauri::AppHandle) -> Result<(), Box<dyn std::error::Error
 
     // Start scanning
     adapter.start_scan(ScanFilter::default()).await?;
-    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+
+    // Store adapter in state
+    {
+        let mut state = ble_state.lock().await;
+        state.adapter = Some(adapter.clone());
+    }
+
+    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
 
     // Find device by name
     let peripherals = adapter.peripherals().await?;
@@ -62,6 +111,14 @@ async fn ble_task(app: tauri::AppHandle) -> Result<(), Box<dyn std::error::Error
 
     // Connect to device
     device.connect().await?;
+
+    // Store device and char_uuid in state
+    {
+        let mut state = ble_state.lock().await;
+        state.device = Some(device.clone());
+        state.char_uuid = Some(char_uuid);
+    }
+
     println!("Connected! Discovering services...");
     app.emit("ble-status", "Connected! Discovering services...")
         .ok();
@@ -85,13 +142,11 @@ async fn ble_task(app: tauri::AppHandle) -> Result<(), Box<dyn std::error::Error
 
     // Listen for notifications
     let mut notification_stream = device.notifications().await?;
-
     while let Some(data) = notification_stream.next().await {
         let notification = BleNotification {
             data: data.value.clone(),
             data_string: String::from_utf8_lossy(&data.value).to_string(),
         };
-
         println!("Received notification: {:?}", notification.data_string);
 
         // Emit event to frontend
@@ -103,6 +158,9 @@ async fn ble_task(app: tauri::AppHandle) -> Result<(), Box<dyn std::error::Error
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let ble_state = Arc::new(Mutex::new(BleState::new()));
+    let ble_state_clone = Arc::clone(&ble_state);
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![greet])
@@ -111,13 +169,28 @@ pub fn run() {
 
             // Start BLE connection on app startup
             tauri::async_runtime::spawn(async move {
-                if let Err(e) = ble_task(app_handle).await {
+                if let Err(e) = ble_task(app_handle, ble_state_clone).await {
                     eprintln!("BLE task error: {}", e);
                 }
             });
 
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while running tauri application")
+        .run(move |_app_handle, event| match event {
+            tauri::RunEvent::ExitRequested {
+                code: _, api: _, ..
+            } => {
+                // Cleanup BLE resources on exit
+                let ble_state = Arc::clone(&ble_state);
+                tauri::async_runtime::block_on(async move {
+                    let mut state = ble_state.lock().await;
+                    if let Err(e) = state.cleanup().await {
+                        eprintln!("Error during BLE cleanup: {}", e);
+                    }
+                });
+            }
+            _ => {}
+        });
 }
