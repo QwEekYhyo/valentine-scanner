@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "valentine-scanner",
+        "title": "Valentine Scanner",
         "width": 1280,
         "height": 900
       }
