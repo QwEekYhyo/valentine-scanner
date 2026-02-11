@@ -178,10 +178,11 @@ pub fn run() {
         })
         .build(tauri::generate_context!())
         .expect("error while running tauri application")
-        .run(move |_app_handle, event| match event {
-            tauri::RunEvent::ExitRequested {
+        .run(move |_app_handle, event| {
+            if let tauri::RunEvent::ExitRequested {
                 code: _, api: _, ..
-            } => {
+            } = event
+            {
                 // Cleanup BLE resources on exit
                 let ble_state = Arc::clone(&ble_state);
                 tauri::async_runtime::block_on(async move {
@@ -191,6 +192,5 @@ pub fn run() {
                     }
                 });
             }
-            _ => {}
         });
 }
