@@ -73,13 +73,14 @@ void setup() {
   Serial.println("Starting BLE Scanner Server...");
 
   BLEDevice::init("ValentineScanner");
+  BLEDevice::setMTU(128);
 
   // Create BLE Server
   pServer = BLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
 
   // Create BLE Service
-  BLEService* pService = pServer->createService(BLEUUID(SERVICE_UUID), 25);
+  BLEService* pService = pServer->createService(SERVICE_UUID);
 
   // Temperature Characteristic (READ + NOTIFY)
   pButtonPressChar = pService->createCharacteristic(
@@ -94,7 +95,8 @@ void setup() {
   BLEAdvertising* pAdvertising = BLEDevice::getAdvertising();
   pAdvertising->addServiceUUID(SERVICE_UUID);
   pAdvertising->setScanResponse(false);
-  pAdvertising->setMinPreferred(0x0);
+  pAdvertising->setMinInterval(0x20);
+  pAdvertising->setMaxInterval(0x40);
   BLEDevice::startAdvertising();
 
   Serial.println("BLE Server is now advertising...");

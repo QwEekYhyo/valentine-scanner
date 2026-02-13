@@ -110,6 +110,7 @@ async fn ble_task(
     app.emit("ble-status", "Device found! Connecting...").ok();
 
     // Connect to device
+    adapter.stop_scan().await.ok();
     device.connect().await?;
 
     // Store device and char_uuid in state
