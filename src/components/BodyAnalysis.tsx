@@ -123,7 +123,9 @@ const BodyAnalysis = ({ onBack, notified, setNotified, bleMocked }: BodyAnalysis
 
                         {step === "waiting" && (
                             <div className="text-center mt-4 text-muted-foreground text-sm">
-                                Appuyez sur « Démarrer le scan » pour commencer
+                                {bleMocked
+                                    ? "Appuyez sur « Démarrer le scan » pour commencer"
+                                    : "Appuyez sur le bouton du scanner pour commencer"}
                             </div>
                         )}
                     </div>

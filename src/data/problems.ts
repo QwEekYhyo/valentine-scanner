@@ -17,42 +17,47 @@ export const PROBLEMS: Problem[] = [
     {
         id: "pieds",
         label: "Pieds",
-        description: "Sensibilité excessive détectée au niveau des pieds",
-        treatments: ["Papouilles", "Pédicure"],
+        description:
+            "Sensibilité excessive détectée au niveau des pieds. Une détente bien-être est de rigueur.",
+        treatments: ["Pédicure", "Fish pédicure", "Papouilles"],
         position: { x: 52, y: 97 },
     },
     {
         id: "ventre",
         label: "Ventre",
-        description: "Tension abdominale nécessitant une attention particulière",
-        treatments: ["Repas", "Pet"],
+        description:
+            "Tension abdominale nécessitant une attention particulière. Les experts recommandent le tout premier repas partagé ensemble.",
+        treatments: ["Probiotique", "Repas", "Pet"],
         position: { x: 51, y: 43 },
     },
     {
         id: "main",
         label: "Main",
-        description: "Carence affective détectée au niveau de la main",
+        description:
+            "Carence affective détectée au niveau de la main. Y ajouter quelque chose pourrait régler le problème.",
         treatments: ["Fleur", "Bague de mariage"],
         position: { x: 24, y: 54 },
     },
     {
         id: "dos",
         label: "Dos",
-        description: "Tensions musculaires détectées dans la zone dorsale",
+        description:
+            "Tensions musculaires détectées dans la zone dorsale. Un problème récurrent chez les personnes ayant un dos aussi développé.",
         treatments: ["Massage", "Étirements"],
         position: { x: 62, y: 34 },
     },
     {
         id: "bouche",
         label: "Bouche",
-        description: "Déficit d'affection buccale constaté",
-        treatments: ["Baiser", "Rouge à lèvres"],
+        description: "Déficit d'affection buccale constaté. Elles ne vont pas s'en tirer comme ça.",
+        treatments: ["Baiser", "Rouge à lèvres", "Baume à lèvres"],
         position: { x: 50, y: 11 },
     },
     {
         id: "visage",
         label: "Peau du visage",
-        description: "Qualité de peau nécessitant un traitement spécifique",
+        description:
+            "Qualité de peau nécessitant un traitement spécifique. Avoir une belle beau est un privilège qu'il faut entretenir.",
         treatments: ["Soin de la peau"],
         position: { x: 44, y: 8 },
     },

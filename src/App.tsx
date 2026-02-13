@@ -35,7 +35,7 @@ function App() {
                 if (bleStatus === "Initializing...") {
                     setBleProblem(true);
                 }
-            }, 10000);
+            }, 5000);
         } else if (statusTimeoutId) clearTimeout(statusTimeoutId);
 
         return () => {
